@@ -1,0 +1,67 @@
+name: Backend Build Scan Push Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: acrburgerbuilderdevgroup1
+  IMAGE_NAME: burgerbuilder-backend
+  RG_NAME: rg-burgerbuilder-group1
+  APP_NAME: app-bb-backend-dev-group1
+
+jobs:
+  build-scan-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and Test
+        working-directory: backend
+        run: mvn -B clean verify
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR Login
+        run: az acr login --name $ACR_NAME
+
+      - name: Build image
+        run: |
+          docker build \\
+            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} \\
+            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \\
+            ./backend
+
+      - name: Push image
+        run: |
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
+
+      - name: Deploy image to App Service
+        run: |
+          az webapp config container set \\
+            --resource-group $RG_NAME \\
+            --name $APP_NAME \\
+            --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
