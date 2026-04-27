@@ -38,10 +38,10 @@ jobs:
 
       - name: Build image
         run: |
-          docker build \\
-            --build-arg VITE_API_BASE_URL= \\
-            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} \\
-            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \\
+          docker build \
+            --build-arg VITE_API_BASE_URL= \
+            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} \
+            -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
             ./frontend
 
       - name: Push image
@@ -51,7 +51,7 @@ jobs:
 
       - name: Deploy image to App Service
         run: |
-          az webapp config container set \\
-            --resource-group $RG_NAME \\
-            --name $APP_NAME \\
+          az webapp config container set \
+            --resource-group $RG_NAME \
+            --name $APP_NAME \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
