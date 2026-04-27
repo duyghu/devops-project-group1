@@ -125,10 +125,6 @@ resource "azurerm_linux_web_app" "frontend" {
   }
 
   public_network_access_enabled = false
-
-  depends_on = [
-    azurerm_application_insights.frontend
-  ]
 }
 
 resource "azurerm_linux_web_app" "backend" {
@@ -152,25 +148,28 @@ resource "azurerm_linux_web_app" "backend" {
   }
 
   app_settings = {
-    WEBSITES_PORT                         = "8080"
-    WEBSITES_ENABLE_APP_SERVICE_STORAGE   = "false"
-    SPRING_PROFILES_ACTIVE                = "azure"
-    DB_HOST                               = "${var.sql_server_name}.database.windows.net"
-    DB_PORT                               = "1433"
-    DB_NAME                               = var.sql_database_name
-    DB_USERNAME                           = var.sql_admin_login
-    DB_PASSWORD                           = var.sql_admin_password
-    DB_DRIVER                             = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
-    SERVER_PORT                           = "8080"
+    WEBSITES_PORT                       = "8080"
+    WEBSITES_ENABLE_APP_SERVICE_STORAGE = "false"
+    SERVER_PORT                         = "8080"
+    SPRING_PROFILES_ACTIVE              = "azure"
+
+    DB_HOST     = "${var.sql_server_name}.database.windows.net"
+    DB_PORT     = "1433"
+    DB_NAME     = var.sql_database_name
+    DB_USERNAME = var.sql_admin_login
+    DB_PASSWORD = var.sql_admin_password
+    DB_DRIVER   = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+
+    SPRING_DATASOURCE_URL               = "jdbc:sqlserver://${var.sql_server_name}.database.windows.net:1433;database=${var.sql_database_name};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+    SPRING_DATASOURCE_USERNAME          = var.sql_admin_login
+    SPRING_DATASOURCE_PASSWORD          = var.sql_admin_password
+    SPRING_DATASOURCE_DRIVER_CLASS_NAME = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+
     CORS_ALLOWED_ORIGINS                  = "http://${azurerm_public_ip.appgw.ip_address}"
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.backend.connection_string
   }
 
   public_network_access_enabled = false
-
-  depends_on = [
-    azurerm_application_insights.backend
-  ]
 }
 
 resource "azurerm_role_assignment" "frontend_acrpull" {
@@ -256,11 +255,10 @@ resource "azurerm_mssql_server" "sql" {
 }
 
 resource "azurerm_mssql_database" "db" {
-  name        = var.sql_database_name
-  server_id   = azurerm_mssql_server.sql.id
-  sku_name    = "Basic"
-  max_size_gb = 2
-
+  name                 = var.sql_database_name
+  server_id            = azurerm_mssql_server.sql.id
+  sku_name             = "Basic"
+  max_size_gb          = 2
   geo_backup_enabled   = false
   storage_account_type = "Local"
 }
@@ -373,7 +371,6 @@ resource "azurerm_application_gateway" "appgw" {
   backend_http_settings {
     name                                = "frontend-http-settings"
     cookie_based_affinity               = "Disabled"
-    path                                = "/"
     port                                = 80
     protocol                            = "Http"
     request_timeout                     = 60
@@ -384,7 +381,6 @@ resource "azurerm_application_gateway" "appgw" {
   backend_http_settings {
     name                                = "backend-http-settings"
     cookie_based_affinity               = "Disabled"
-    path                                = "/actuator/health"
     port                                = 8080
     protocol                            = "Http"
     request_timeout                     = 60
@@ -434,7 +430,7 @@ resource "azurerm_application_gateway" "appgw" {
 
     path_rule {
       name                       = "api-path"
-      paths                      = ["/api/*"]
+      paths                      = ["/api", "/api/*"]
       backend_address_pool_name  = "backend-pool"
       backend_http_settings_name = "backend-http-settings"
     }
