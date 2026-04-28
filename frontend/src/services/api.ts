@@ -1,11 +1,10 @@
 import axios from 'axios';
 import type { Ingredient, CartItem, Order, IngredientsResponse, IngredientCategory } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
-// Debug: Log the API URL to help with troubleshooting
-console.log('API_BASE_URL:', API_BASE_URL);
-console.log('VITE_API_BASE_URL env var:', import.meta.env.VITE_API_BASE_URL);
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const API_BASE_URL = configuredApiBaseUrl
+  ? configuredApiBaseUrl.replace(/\/$/, '')
+  : window.location.origin;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -80,4 +79,3 @@ export const getOrdersBySession = async (sessionId: string): Promise<Order[]> =>
 };
 
 export default apiClient;
-

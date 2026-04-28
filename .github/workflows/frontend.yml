@@ -39,7 +39,6 @@ jobs:
       - name: Build image
         run: |
           docker build \
-            --build-arg VITE_API_BASE_URL= \
             -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} \
             -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
             ./frontend
