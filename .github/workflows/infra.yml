@@ -53,4 +53,5 @@ jobs:
           path: infra/terraform/tfplan
 
       - name: Terraform Apply
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: terraform apply -auto-approve tfplan
