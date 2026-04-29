@@ -9,6 +9,9 @@ jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -40,11 +43,8 @@ jobs:
         run: mvn -B verify
 
       - name: SonarQube analysis
-        if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         working-directory: backend
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=group1-devops \
@@ -53,5 +53,5 @@ jobs:
             -Dsonar.token=$SONAR_TOKEN
 
       - name: SonarQube skipped
-        if: ${{ secrets.SONAR_TOKEN == '' || secrets.SONAR_HOST_URL == '' }}
+        if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
         run: echo "Skipping SonarQube analysis because SONAR_TOKEN or SONAR_HOST_URL is not configured."
