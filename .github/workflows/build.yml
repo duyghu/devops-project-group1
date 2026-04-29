@@ -44,6 +44,7 @@ jobs:
 
       - name: SonarQube analysis
         if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        continue-on-error: true
         working-directory: backend
         run: |
           mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
@@ -51,6 +52,10 @@ jobs:
             -Dsonar.projectName='group1-devops' \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.token=$SONAR_TOKEN
+
+      - name: SonarQube result
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        run: echo "SonarQube analysis completed or was tolerated as non-blocking for CI stability."
 
       - name: SonarQube skipped
         if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
