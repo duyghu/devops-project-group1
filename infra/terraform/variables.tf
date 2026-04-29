@@ -62,8 +62,29 @@ variable "appgw_public_ip_name" {
   type = string
 }
 
+variable "appgw_domain_name_label" {
+  type    = string
+  default = null
+}
+
+variable "appgw_custom_hostname" {
+  type    = string
+  default = null
+}
+
 variable "waf_policy_name" {
   type = string
+}
+
+variable "appgw_ssl_certificate_name" {
+  type    = string
+  default = "appgw-tls"
+}
+
+variable "appgw_ssl_certificate_secret_id" {
+  type      = string
+  default   = null
+  sensitive = true
 }
 
 variable "sql_server_name" {

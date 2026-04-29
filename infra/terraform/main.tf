@@ -5,6 +5,20 @@ resource "azurerm_resource_group" "rg" {
 
 data "azurerm_client_config" "current" {}
 
+locals {
+  https_enabled      = try(trimspace(nonsensitive(var.appgw_ssl_certificate_secret_id)) != "", false)
+  appgw_hostname     = coalesce(var.appgw_custom_hostname, azurerm_public_ip.appgw.fqdn, azurerm_public_ip.appgw.ip_address)
+  appgw_http_origin  = "http://${local.appgw_hostname}"
+  appgw_https_origin = "https://${local.appgw_hostname}"
+  cors_allowed_origins = join(
+    ",",
+    distinct(compact([
+      local.appgw_http_origin,
+      local.https_enabled ? local.appgw_https_origin : null
+    ]))
+  )
+}
+
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet-${var.project_name}-${var.environment}"
   location            = azurerm_resource_group.rg.location
@@ -165,7 +179,7 @@ resource "azurerm_linux_web_app" "backend" {
     SPRING_DATASOURCE_PASSWORD          = var.sql_admin_password
     SPRING_DATASOURCE_DRIVER_CLASS_NAME = "com.microsoft.sqlserver.jdbc.SQLServerDriver"
 
-    CORS_ALLOWED_ORIGINS                  = "http://${azurerm_public_ip.appgw.ip_address}"
+    CORS_ALLOWED_ORIGINS                  = local.cors_allowed_origins
     APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.backend.connection_string
   }
 
@@ -336,12 +350,25 @@ resource "azurerm_private_endpoint" "keyvault_pe" {
   }
 }
 
+resource "azurerm_user_assigned_identity" "appgw" {
+  name                = "id-appgw-${var.project_name}-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_role_assignment" "appgw_keyvault_secrets_user" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_user_assigned_identity.appgw.principal_id
+}
+
 resource "azurerm_public_ip" "appgw" {
   name                = var.appgw_public_ip_name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
   sku                 = "Standard"
+  domain_name_label   = var.appgw_domain_name_label
 }
 
 resource "azurerm_web_application_firewall_policy" "waf" {
@@ -367,6 +394,11 @@ resource "azurerm_application_gateway" "appgw" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.appgw.id]
+  }
+
   firewall_policy_id = azurerm_web_application_firewall_policy.waf.id
 
   sku {
@@ -385,9 +417,27 @@ resource "azurerm_application_gateway" "appgw" {
     port = 80
   }
 
+  dynamic "frontend_port" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name = "port-443"
+      port = 443
+    }
+  }
+
   frontend_ip_configuration {
     name                 = "frontend-ip"
     public_ip_address_id = azurerm_public_ip.appgw.id
+  }
+
+  dynamic "ssl_certificate" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name                = var.appgw_ssl_certificate_name
+      key_vault_secret_id = var.appgw_ssl_certificate_secret_id
+    }
   }
 
   backend_address_pool {
@@ -425,6 +475,18 @@ resource "azurerm_application_gateway" "appgw" {
     frontend_ip_configuration_name = "frontend-ip"
     frontend_port_name             = "port-80"
     protocol                       = "Http"
+  }
+
+  dynamic "http_listener" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name                           = "listener-https"
+      frontend_ip_configuration_name = "frontend-ip"
+      frontend_port_name             = "port-443"
+      protocol                       = "Https"
+      ssl_certificate_name           = var.appgw_ssl_certificate_name
+    }
   }
 
   probe {
@@ -468,13 +530,57 @@ resource "azurerm_application_gateway" "appgw" {
     }
   }
 
-  request_routing_rule {
-    name               = "routing-rule"
-    rule_type          = "PathBasedRouting"
-    http_listener_name = "listener-http"
-    url_path_map_name  = "path-map"
-    priority           = 100
+  dynamic "redirect_configuration" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name                 = "http-to-https-redirect"
+      redirect_type        = "Permanent"
+      target_listener_name = "listener-https"
+      include_path         = true
+      include_query_string = true
+    }
   }
+
+  dynamic "request_routing_rule" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name                        = "routing-rule-http-redirect"
+      rule_type                   = "Basic"
+      http_listener_name          = "listener-http"
+      redirect_configuration_name = "http-to-https-redirect"
+      priority                    = 100
+    }
+  }
+
+  dynamic "request_routing_rule" {
+    for_each = local.https_enabled ? [1] : []
+
+    content {
+      name               = "routing-rule-https"
+      rule_type          = "PathBasedRouting"
+      http_listener_name = "listener-https"
+      url_path_map_name  = "path-map"
+      priority           = 110
+    }
+  }
+
+  dynamic "request_routing_rule" {
+    for_each = local.https_enabled ? [] : [1]
+
+    content {
+      name               = "routing-rule"
+      rule_type          = "PathBasedRouting"
+      http_listener_name = "listener-http"
+      url_path_map_name  = "path-map"
+      priority           = 100
+    }
+  }
+
+  depends_on = [
+    azurerm_role_assignment.appgw_keyvault_secrets_user
+  ]
 }
 
 resource "azurerm_monitor_metric_alert" "cpu_frontend" {
