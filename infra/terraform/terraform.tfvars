@@ -19,8 +19,8 @@ backend_app_name  = "app-bb-backend-dev-group1"
 appgw_name           = "agw-burgerbuilder-dev-group1"
 appgw_public_ip_name = "pip-agw-burgerbuilder-dev-group1"
 # Optional HTTPS inputs:
-# appgw_domain_name_label       = "burgerbuilder-group1-dev"
-# appgw_custom_hostname         = "burgerbuilder-group1-dev.italynorth.cloudapp.azure.com"
+appgw_domain_name_label       = "burgerbuilder-group1"
+appgw_custom_hostname         = "burgerbuilder-group1.italynorth.cloudapp.azure.com"
 # appgw_ssl_certificate_secret_id = "https://<your-key-vault-name>.vault.azure.net/secrets/<certificate-secret-name>/<version>"
 waf_policy_name      = "waf-burgerbuilder-de-group1"
 
