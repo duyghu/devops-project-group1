@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#f5f7fb"/>
+  <text x="700" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#1f2937">Azure 3-Tier Burger Builder Architecture</text>
+  <rect x="80" y="90" width="1240" height="740" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="110" y="130" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#0f172a">Resource Group: rg-burgerbuilder-group1</text>
+  <rect x="120" y="170" width="1160" height="610" rx="18" fill="#eef4ff" stroke="#93c5fd" stroke-width="2"/>
+  <text x="150" y="205" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#1d4ed8">Virtual Network: vnet-devops-group1-dev</text>
+  <rect x="160" y="240" width="210" height="150" rx="16" fill="#dbeafe" stroke="#60a5fa" stroke-width="2"/>
+  <text x="265" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1e3a8a">snet-agw</text>
+  <text x="265" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#1f2937">Application Gateway</text>
+  <text x="265" y="338" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">WAF v2</text>
+  <text x="265" y="366" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Only public entry point</text>
+  <rect x="430" y="240" width="260" height="150" rx="16" fill="#dcfce7" stroke="#4ade80" stroke-width="2"/>
+  <text x="560" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#166534">snet-appsvc-integration</text>
+  <text x="560" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#1f2937">Frontend Web App</text>
+  <text x="560" y="338" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">React + TypeScript + Vite</text>
+  <text x="560" y="366" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Backend Web App</text>
+  <rect x="760" y="240" width="250" height="220" rx="16" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="885" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#92400e">snet-private-endpoints</text>
+  <text x="885" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#1f2937">Private Endpoints</text>
+  <text x="885" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Frontend App Service PE</text>
+  <text x="885" y="368" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Backend App Service PE</text>
+  <text x="885" y="396" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Azure SQL PE</text>
+  <text x="885" y="424" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Key Vault PE</text>
+  <rect x="1070" y="240" width="170" height="150" rx="16" fill="#fae8ff" stroke="#d946ef" stroke-width="2"/>
+  <text x="1155" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#86198f">snet-ops</text>
+  <text x="1155" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#1f2937">Ops / VM Access</text>
+  <text x="1155" y="338" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Ansible / SonarQube</text>
+  <rect x="220" y="500" width="240" height="120" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <text x="340" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Application Insights</text>
+  <text x="340" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Frontend + Backend telemetry</text>
+  <rect x="520" y="500" width="240" height="120" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <text x="640" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Log Analytics</text>
+  <text x="640" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Platform logs + diagnostics</text>
+  <rect x="820" y="500" width="240" height="120" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <text x="940" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Azure SQL Database</text>
+  <text x="940" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Public access disabled</text>
+  <rect x="1120" y="500" width="120" height="120" rx="16" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+  <text x="1180" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0f172a">Key Vault</text>
+  <text x="1180" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#1f2937">Private endpoint</text>
+  <rect x="220" y="660" width="1020" height="80" rx="16" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/>
+  <text x="730" y="705" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#9a3412">GitHub Actions + Terraform + Ansible</text>
+  <text x="730" y="730" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#7c2d12">Infra provisioning, app build/test/scan/deploy, SonarQube configuration, and alert-trigger scripts</text>
+  <line x1="370" y1="315" x2="430" y2="315" stroke="#334155" stroke-width="3"/>
+  <line x1="690" y1="315" x2="760" y2="315" stroke="#334155" stroke-width="3"/>
+  <line x1="600" y1="390" x2="600" y2="500" stroke="#334155" stroke-width="3"/>
+  <line x1="460" y1="560" x2="520" y2="560" stroke="#334155" stroke-width="3"/>
+  <line x1="760" y1="560" x2="820" y2="560" stroke="#334155" stroke-width="3"/>
+  <line x1="1060" y1="560" x2="1120" y2="560" stroke="#334155" stroke-width="3"/>
+  <line x1="885" y1="460" x2="940" y2="500" stroke="#334155" stroke-width="3"/>
+  <text x="50" y="315" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Internet</text>
+  <line x1="90" y1="315" x2="160" y2="315" stroke="#334155" stroke-width="3"/>
+</svg>

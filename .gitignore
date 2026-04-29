@@ -23,7 +23,9 @@ yarn-error.log*
 *.temp
 
 **/**/.terraform/
-**/**/.terraform.lock.hcl
 **/**/*.tfstate
 **/**/target/
-
+**/dist/
+**/coverage/
+**/node_modules/
+**/tfplan

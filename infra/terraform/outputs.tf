@@ -21,3 +21,11 @@ output "appgw_public_ip" {
 output "sql_fqdn" {
   value = azurerm_mssql_server.sql.fully_qualified_domain_name
 }
+
+output "application_gateway_url" {
+  value = "http://${azurerm_public_ip.appgw.ip_address}"
+}
+
+output "key_vault_uri" {
+  value = azurerm_key_vault.kv.vault_uri
+}

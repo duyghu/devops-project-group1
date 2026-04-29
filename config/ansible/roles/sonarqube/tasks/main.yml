@@ -1,0 +1,39 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - docker.io
+      - docker-compose-plugin
+      - curl
+    state: present
+    update_cache: true
+
+- name: Enable docker service
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Set vm.max_map_count
+  sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: true
+
+- name: Create SonarQube installation directory
+  file:
+    path: "{{ sonarqube_install_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Render SonarQube docker compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ sonarqube_install_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Start SonarQube stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ sonarqube_install_dir }}"
+    state: present

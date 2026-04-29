@@ -295,13 +295,45 @@ resource "azurerm_private_endpoint" "sql_pe" {
 }
 
 resource "azurerm_key_vault" "kv" {
-  name                       = var.key_vault_name
-  location                   = azurerm_resource_group.rg.location
-  resource_group_name        = azurerm_resource_group.rg.name
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  rbac_authorization_enabled = true
-  purge_protection_enabled   = false
+  name                          = var.key_vault_name
+  location                      = azurerm_resource_group.rg.location
+  resource_group_name           = azurerm_resource_group.rg.name
+  tenant_id                     = data.azurerm_client_config.current.tenant_id
+  sku_name                      = "standard"
+  rbac_authorization_enabled    = true
+  purge_protection_enabled      = false
+  public_network_access_enabled = false
+}
+
+resource "azurerm_private_dns_zone" "keyvault" {
+  name                = "privatelink.vaultcore.azure.net"
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "keyvault_link" {
+  name                  = "keyvault-dns-link"
+  resource_group_name   = azurerm_resource_group.rg.name
+  private_dns_zone_name = azurerm_private_dns_zone.keyvault.name
+  virtual_network_id    = azurerm_virtual_network.vnet.id
+}
+
+resource "azurerm_private_endpoint" "keyvault_pe" {
+  name                = "pe-keyvault"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.snet_private_endpoints.id
+
+  private_service_connection {
+    name                           = "psc-keyvault"
+    private_connection_resource_id = azurerm_key_vault.kv.id
+    subresource_names              = ["vault"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "keyvault-dns-zone-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.keyvault.id]
+  }
 }
 
 resource "azurerm_public_ip" "appgw" {
@@ -460,6 +492,24 @@ resource "azurerm_monitor_metric_alert" "cpu_frontend" {
     aggregation      = "Total"
     operator         = "GreaterThan"
     threshold        = 70
+  }
+}
+
+resource "azurerm_monitor_metric_alert" "appgw_backend_health" {
+  name                = "alert-appgw-backend-health"
+  resource_group_name = azurerm_resource_group.rg.name
+  scopes              = [azurerm_application_gateway.appgw.id]
+  description         = "App Gateway backend health below full healthy capacity for 5 minutes"
+  severity            = 2
+  frequency           = "PT1M"
+  window_size         = "PT5M"
+
+  criteria {
+    metric_namespace = "Microsoft.Network/applicationGateways"
+    metric_name      = "HealthyHostCount"
+    aggregation      = "Average"
+    operator         = "LessThan"
+    threshold        = 1
   }
 }
 

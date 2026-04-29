@@ -54,6 +54,15 @@ jobs:
             -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
             ./backend
 
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: table
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: os,library
+
       - name: Push image
         run: |
           docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
@@ -65,3 +74,6 @@ jobs:
             --resource-group $RG_NAME \
             --name $APP_NAME \
             --container-image-name $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Restart backend app
+        run: az webapp restart --resource-group $RG_NAME --name $APP_NAME

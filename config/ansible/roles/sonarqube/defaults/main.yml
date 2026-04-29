@@ -1,0 +1,6 @@
+---
+sonarqube_install_dir: /opt/sonarqube
+sonarqube_postgres_user: sonar
+sonarqube_postgres_password: sonar
+sonarqube_postgres_db: sonarqube
+sonarqube_version: community

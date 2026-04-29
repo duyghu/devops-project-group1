@@ -6,6 +6,23 @@ import BurgerPreview from './BurgerPreview';
 import IngredientList from '../Ingredients/IngredientList';
 import './BurgerBuilder.css';
 
+const sampleIngredients = [
+  { id: 1, name: 'Sesame Bun', category: 'buns' as const, price: 1.5, imageUrl: '' },
+  { id: 2, name: 'Whole Wheat Bun', category: 'buns' as const, price: 1.8, imageUrl: '' },
+  { id: 3, name: 'Beef Patty', category: 'patties' as const, price: 3.5, imageUrl: '' },
+  { id: 4, name: 'Chicken Patty', category: 'patties' as const, price: 3.0, imageUrl: '' },
+  { id: 5, name: 'Veggie Patty', category: 'patties' as const, price: 2.8, imageUrl: '' },
+  { id: 6, name: 'Lettuce', category: 'toppings' as const, price: 0.5, imageUrl: '' },
+  { id: 7, name: 'Tomato', category: 'toppings' as const, price: 0.5, imageUrl: '' },
+  { id: 8, name: 'Onion', category: 'toppings' as const, price: 0.3, imageUrl: '' },
+  { id: 9, name: 'Cheese', category: 'toppings' as const, price: 1.0, imageUrl: '' },
+  { id: 10, name: 'Pickles', category: 'toppings' as const, price: 0.4, imageUrl: '' },
+  { id: 11, name: 'Ketchup', category: 'sauces' as const, price: 0.2, imageUrl: '' },
+  { id: 12, name: 'Mayo', category: 'sauces' as const, price: 0.2, imageUrl: '' },
+  { id: 13, name: 'Mustard', category: 'sauces' as const, price: 0.2, imageUrl: '' },
+  { id: 14, name: 'BBQ Sauce', category: 'sauces' as const, price: 0.3, imageUrl: '' },
+];
+
 const BurgerBuilder: React.FC = () => {
   const {
     layers,
@@ -24,52 +41,32 @@ const BurgerBuilder: React.FC = () => {
   const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadIngredients = async () => {
+      try {
+        setLoading(true);
+        const data = await getIngredients();
+        // Handle both grouped format (legacy) and flat list format (current backend)
+        const allIngredients = Array.isArray(data)
+          ? data
+          : [
+              ...data.buns,
+              ...data.patties,
+              ...data.toppings,
+              ...data.sauces,
+            ];
+        setIngredients(allIngredients);
+        setError(null);
+      } catch {
+        setError('Failed to load ingredients. Using sample data for demo.');
+        // Set sample data for demo purposes
+        setIngredients(sampleIngredients);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadIngredients();
-  }, []);
-
-  const loadIngredients = async () => {
-    try {
-      setLoading(true);
-      const data = await getIngredients();
-      // Handle both grouped format (legacy) and flat list format (current backend)
-      const allIngredients = Array.isArray(data) 
-        ? data 
-        : [
-            ...data.buns,
-            ...data.patties,
-            ...data.toppings,
-            ...data.sauces,
-          ];
-      setIngredients(allIngredients);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load ingredients. Using sample data for demo.');
-      // Set sample data for demo purposes
-      setSampleIngredients();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const setSampleIngredients = () => {
-    const sampleIngredients = [
-      { id: 1, name: 'Sesame Bun', category: 'buns' as const, price: 1.5, imageUrl: '' },
-      { id: 2, name: 'Whole Wheat Bun', category: 'buns' as const, price: 1.8, imageUrl: '' },
-      { id: 3, name: 'Beef Patty', category: 'patties' as const, price: 3.5, imageUrl: '' },
-      { id: 4, name: 'Chicken Patty', category: 'patties' as const, price: 3.0, imageUrl: '' },
-      { id: 5, name: 'Veggie Patty', category: 'patties' as const, price: 2.8, imageUrl: '' },
-      { id: 6, name: 'Lettuce', category: 'toppings' as const, price: 0.5, imageUrl: '' },
-      { id: 7, name: 'Tomato', category: 'toppings' as const, price: 0.5, imageUrl: '' },
-      { id: 8, name: 'Onion', category: 'toppings' as const, price: 0.3, imageUrl: '' },
-      { id: 9, name: 'Cheese', category: 'toppings' as const, price: 1.0, imageUrl: '' },
-      { id: 10, name: 'Pickles', category: 'toppings' as const, price: 0.4, imageUrl: '' },
-      { id: 11, name: 'Ketchup', category: 'sauces' as const, price: 0.2, imageUrl: '' },
-      { id: 12, name: 'Mayo', category: 'sauces' as const, price: 0.2, imageUrl: '' },
-      { id: 13, name: 'Mustard', category: 'sauces' as const, price: 0.2, imageUrl: '' },
-      { id: 14, name: 'BBQ Sauce', category: 'sauces' as const, price: 0.3, imageUrl: '' },
-    ];
-    setIngredients(sampleIngredients);
-  };
+  }, [setIngredients]);
 
   const handleAddToCart = () => {
     if (layers.length === 0) {
@@ -164,4 +161,3 @@ const BurgerBuilder: React.FC = () => {
 };
 
 export default BurgerBuilder;
-

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 import type { Ingredient, CartItem, Order, IngredientsResponse } from '../types';
 
 // Mock axios
@@ -15,7 +16,7 @@ const mockAxiosInstance = {
 };
 
 // Setup axios.create to return our mock instance
-mockedAxios.create.mockReturnValue(mockAxiosInstance as any);
+mockedAxios.create.mockReturnValue(mockAxiosInstance as unknown as AxiosInstance);
 
 // Import after mocking
 const {
@@ -175,4 +176,3 @@ describe('API Service', () => {
     });
   });
 });
-

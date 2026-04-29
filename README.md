@@ -1,286 +1,250 @@
-# Burger Builder Application
+# Burger Builder Azure DevOps Project
 
-A full-stack web application for building and ordering custom burgers with a modern React frontend and Spring Boot backend API.
+Production-style Azure deployment for a 3-tier Burger Builder application. The solution uses a React/TypeScript/Vite frontend, a Spring Boot backend, Azure SQL Database, private networking, Application Gateway WAF v2 as the only public entry point, Terraform for provisioning, Ansible for SonarQube VM automation, GitHub Actions for CI/CD, and Azure Monitor for observability.
 
-## Project Structure
+## Repository Structure
 
-```
-capstone_project_ih/
-├── frontend/                 # React + TypeScript + Vite frontend
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── context/         # React Context providers
-│   │   ├── services/        # API service layer
-│   │   ├── types/           # TypeScript type definitions
-│   │   └── utils/           # Utility functions
-│   ├── public/              # Static assets
-│   ├── package.json         # Frontend dependencies
-│   ├── vite.config.ts       # Vite configuration
-│   ├── nginx.conf           # Nginx configuration for production
-│   └── README.md            # Frontend-specific documentation
-├── backend/                 # Spring Boot REST API
-│   ├── src/main/java/com/burgerbuilder/
-│   │   ├── controller/      # REST controllers
-│   │   ├── service/         # Business logic services
-│   │   ├── repository/      # Data access layer
-│   │   ├── entity/          # JPA entities
-│   │   ├── dto/             # Data transfer objects
-│   │   ├── exception/       # Custom exception handling
-│   │   └── config/          # Configuration classes
-│   ├── src/main/resources/
-│   │   ├── application.properties          # Default configuration
-│   │   ├── application-docker.properties   # Docker/PostgreSQL config
-│   │   ├── application-azure.properties    # Azure SQL config
-│   │   ├── schema.sql                      # Database schema
-│   │   └── data.sql                        # Initial data
-│   ├── pom.xml              # Maven dependencies and build config
-│   └── TESTING.md           # Backend testing documentation
-├── environment.env.example  # Environment variables template
-└── environment.env          # Environment variables (create from example)
+```text
+.
+├── .github/workflows/
+├── backend/
+├── config/ansible/
+│   ├── inventories/{dev,prod}
+│   ├── playbooks/sonarqube.yml
+│   └── roles/sonarqube
+├── docs/
+│   ├── architecture-diagram.svg
+│   └── runbook.md
+├── frontend/
+├── infra/terraform/
+└── scripts/alerts/
 ```
 
-## Frontend Application
+## Architecture
 
-### Tech Stack
+- Only Azure Application Gateway WAF v2 is public.
+- `/` routes to the frontend web app.
+- `/api/*` routes to the backend web app.
+- Frontend and backend App Services have public network access disabled.
+- Azure SQL Database has public network access disabled and is reached through a private endpoint.
+- Key Vault is private through a private endpoint and private DNS.
+- Application Insights and Log Analytics are used for telemetry and diagnostics.
 
-- **Framework**: React 19.1.1
-- **Language**: TypeScript 5.8.3
-- **Build Tool**: Vite 7.1.7
-- **Routing**: React Router DOM 7.9.3
-- **HTTP Client**: Axios 1.12.2
-- **Testing**: Vitest 1.0.4 + Testing Library
-- **Linting**: ESLint 9.36.0
-- **CSS**: Vanilla CSS with CSS modules
+Architecture diagram: [docs/architecture-diagram.svg](/Users/duyguu16/Documents/conference/group1/project/docs/architecture-diagram.svg)
 
-### Key Features
+## Prerequisites
 
-- Interactive burger builder with drag-and-drop ingredients
-- Shopping cart management with session persistence
-- Order creation and tracking
-- Order history viewing
-- Responsive design with modern UI/UX
-- Real-time API integration
-- Comprehensive testing coverage
+- Azure CLI authenticated to the target subscription
+- Terraform `>= 1.6`
+- Docker
+- Node.js 20+
+- Java 21 + Maven
+- Ansible
+- GitHub repository secrets:
+  - `AZURE_CLIENT_ID`
+  - `AZURE_TENANT_ID`
+  - `AZURE_SUBSCRIPTION_ID`
+  - `SONAR_TOKEN`
+  - `SONAR_HOST_URL`
 
-### Backend URL Configuration
-
-The frontend connects to the backend API through the following configuration:
-
-**Location**: `frontend/src/services/api.ts`
-
-```typescript
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-```
-
-**Required Environment Variable**:
-- `VITE_API_BASE_URL`: The base URL for the backend API (defaults to `http://localhost:8080`)
-
-**Usage**:
-1. Create a `.env` file in the frontend directory
-2. Add: `VITE_API_BASE_URL=http://your-backend-url:8080`
-3. For production: `VITE_API_BASE_URL=https://your-production-api.com`
-
-### Frontend Compilation and Deployment
-
-#### Development Setup
+## Provision with Terraform
 
 ```bash
-cd frontend
-npm install
-npm run dev          # Start development server (http://localhost:5173)
-npm run test         # Run tests
-npm run test:ui      # Run tests with UI
-npm run test:coverage # Run tests with coverage
-npm run lint         # Run ESLint
+cd infra/terraform
+terraform init -backend-config=backend.hcl
+terraform workspace select -or-create=true dev
+terraform fmt -recursive
+terraform validate
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
-#### Production Build
+Terraform provisions:
+
+- Resource group
+- VNet and subnets
+- Application Gateway WAF v2
+- Frontend and backend Linux Web Apps
+- App Service VNet integration
+- Private endpoints for frontend, backend, SQL, and Key Vault
+- Private DNS zones and VNet links
+- Azure SQL server and database
+- ACR
+- Application Insights + Log Analytics
+- Metric alerts for:
+  - App Gateway backend health
+  - Frontend CPU
+  - Backend CPU
+  - SQL utilization
+
+## Configure SonarQube with Ansible
 
 ```bash
-cd frontend
-npm run build        # Build for production
-npm run preview      # Preview production build locally
+cd config/ansible
+ansible-galaxy collection install -r requirements.yml
+ansible-playbook playbooks/sonarqube.yml
+ansible-playbook -i inventories/prod/hosts.ini playbooks/sonarqube.yml
 ```
 
-The build process:
-1. **TypeScript Compilation**: `tsc -b` compiles TypeScript to JavaScript
-2. **Vite Build**: Bundles and optimizes assets
-3. **Output**: Creates `dist/` folder with production-ready files
+The SonarQube configuration is role-based and includes:
 
-#### Deployment Options
+- Docker installation
+- Docker service enablement
+- Required kernel tuning
+- Docker Compose rendering
+- SonarQube + PostgreSQL startup
 
-**Option 1: Static Hosting (Recommended)**
-- Build the application: `npm run build`
-- Deploy the `dist/` folder to any static hosting service:
-  - Vercel, Netlify, AWS S3, Azure Static Web Apps
-  - Set `VITE_API_BASE_URL` environment variable in hosting platform
+## Deploy with GitHub Actions
 
-**Option 2: Docker with Nginx**
-- The project includes `nginx.conf` for containerized deployment
-- Nginx serves the built React app with optimizations:
-  - Gzip compression
-  - Static asset caching
-  - Security headers
-  - SPA routing support
+### Infrastructure
 
-**Option 3: Traditional Web Server**
-- Upload built files to any web server (Apache, Nginx, IIS)
-- Configure server to serve `index.html` for all routes (SPA support)
+Workflow: `.github/workflows/infra.yml`
 
-## Backend Application
+- Terraform init
+- Workspace selection
+- Terraform fmt
+- Terraform validate
+- Terraform plan
+- Terraform apply
 
-### Tech Stack
+### Frontend
 
-- **Framework**: Spring Boot 3.2.0
-- **Language**: Java 21
-- **Build Tool**: Maven
-- **Database**: 
-  - PostgreSQL (Docker/Development)
-  - Azure SQL Database (Production)
-- **ORM**: Spring Data JPA + Hibernate
-- **Validation**: Spring Boot Validation
-- **Utilities**: Lombok
-- **Testing**: Spring Boot Test + H2 Database
+Workflow: `.github/workflows/frontend.yml`
 
-### Key Features
+- `npm ci`
+- `npm run lint`
+- `npm run test -- --run`
+- `npm run build`
+- Docker build
+- Trivy scan
+- ACR push
+- Azure Web App deploy
 
-- RESTful API for burger ingredients, cart, and orders
-- Session-based cart management
-- Database initialization with sample data
-- CORS configuration for frontend integration
-- Comprehensive error handling
-- Multi-environment configuration support
+### Backend
 
-### Environment Variables Required
+Workflow: `.github/workflows/backend.yml`
 
-The backend requires the following environment variables (defined in `environment.env`):
+- Maven verify
+- Docker build
+- Trivy scan
+- ACR push
+- Azure Web App deploy
 
-#### Database Configuration
-- `DB_HOST`: Database server hostname
-- `DB_PORT`: Database port (1433 for SQL Server, 5432 for PostgreSQL)
-- `DB_NAME`: Database name
-- `DB_USERNAME`: Database username
-- `DB_PASSWORD`: Database password
-- `DB_DRIVER`: JDBC driver class name
+### SonarQube Analysis
 
-#### Application Configuration
-- `SPRING_PROFILES_ACTIVE`: Active Spring profile
-  - `docker`: Uses PostgreSQL configuration
-  - `azure`: Uses Azure SQL configuration
-- `SERVER_PORT`: Server port (default: 8080)
-- `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins
+Workflow: `.github/workflows/build.yml`
 
-#### Example Configuration
+- Backend Maven verify
+- SonarQube analysis
+
+## Validate the Application
+
+### Public entry point
 
 ```bash
-# For Docker/PostgreSQL Development
-SPRING_PROFILES_ACTIVE=docker
-DB_HOST=database
-DB_PORT=5432
-DB_NAME=burgerbuilder
-DB_USERNAME=postgres
-DB_PASSWORD=YourStrong!Passw0rd
-DB_DRIVER=org.postgresql.Driver
-
-# For Azure SQL Production
-SPRING_PROFILES_ACTIVE=azure
-DB_HOST=your-server.database.windows.net
-DB_PORT=1433
-DB_NAME=burgerbuilder
-DB_USERNAME=your-username
-DB_PASSWORD=your-password
-DB_DRIVER=com.microsoft.sqlserver.jdbc.SQLServerDriver
+curl -i http://<APP_GW_PUBLIC_IP>/
+curl -i http://<APP_GW_PUBLIC_IP>/api/ingredients
+curl -i http://<APP_GW_PUBLIC_IP>/api/health
 ```
 
-### Backend Compilation and Deployment
+Expected:
 
-#### Development Setup
+- `/` returns the frontend UI
+- `/api/ingredients` returns backend JSON
+- `/api/health` returns `200 OK`
+
+### Database write and read proof
+
+1. Open the app through the Application Gateway public IP.
+2. Build a burger and place an order.
+3. Read the order history back:
 
 ```bash
-cd backend
-mvn clean install     # Download dependencies and compile
-mvn spring-boot:run   # Start development server
+curl "http://<APP_GW_PUBLIC_IP>/api/orders/history?email=<customer-email>"
 ```
 
-#### Production Build
+### Private networking checks
+
+- Web apps: public network access disabled
+- SQL: public network access disabled
+- Private DNS zones present:
+  - `privatelink.azurewebsites.net`
+  - `privatelink.database.windows.net`
+  - `privatelink.vaultcore.azure.net`
+
+## Monitoring and Alerts
+
+Implemented alerts:
+
+- `alert-appgw-backend-health`
+- `alert-frontend-cpu-high`
+- `alert-backend-cpu-high`
+- `alert-sql-high-utilization`
+
+### Trigger scripts
+
+Run from the Azure VM:
 
 ```bash
-cd backend
-mvn clean package     # Build JAR file
+chmod +x scripts/alerts/*.sh
+./scripts/alerts/trigger-backend-unhealthy.sh 600
+./scripts/alerts/trigger-app-load.sh 600 20
+./scripts/alerts/trigger-sql-load.sh 600 8
 ```
 
-The build process:
-1. **Dependency Resolution**: Downloads all Maven dependencies
-2. **Compilation**: Compiles Java source code to bytecode
-3. **Testing**: Runs unit and integration tests
-4. **Packaging**: Creates executable JAR file in `target/` directory
+## Kusto Queries
 
-#### Deployment Options
+Application Gateway diagnostics:
 
-**Option 1: JAR File Execution**
-```bash
-java -jar target/burger-builder-backend-1.0.0.jar
+```kusto
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.NETWORK"
+| where Category contains "ApplicationGateway"
+| project TimeGenerated, Resource, Category, OperationName, httpStatus_d, requestUri_s
+| order by TimeGenerated desc
 ```
 
-**Option 2: Docker Deployment**
-```bash
-# Build Docker image
-docker build -t burger-builder-backend .
+Backend request failures:
 
-# Run with environment variables
-docker run -p 8080:8080 --env-file environment.env burger-builder-backend
+```kusto
+AppRequests
+| where AppRoleName contains "backend"
+| summarize failures=countif(Success == false), total=count() by bin(TimeGenerated, 5m), Name
+| order by TimeGenerated desc
 ```
 
-**Option 3: Cloud Platform Deployment**
-- **Azure App Service**: Deploy JAR file directly
-- **AWS Elastic Beanstalk**: Upload JAR file
-- **Google Cloud Run**: Containerized deployment
-- **Heroku**: Git-based deployment
+SQL dependency latency:
 
-#### Environment-Specific Deployment
+```kusto
+AppDependencies
+| where Type == "SQL"
+| summarize avgDurationMs=avg(DurationMs), calls=count() by bin(TimeGenerated, 5m), Target
+| order by TimeGenerated desc
+```
 
-**Development (PostgreSQL)**:
-1. Set `SPRING_PROFILES_ACTIVE=docker`
-2. Configure PostgreSQL connection variables
-3. Run with Docker Compose or local PostgreSQL
+## Submission Checklist
 
-**Production (Azure SQL)**:
-1. Set `SPRING_PROFILES_ACTIVE=azure`
-2. Configure Azure SQL connection variables
-3. Deploy to cloud platform with proper security configuration
+- Architecture diagram in `docs/architecture-diagram.svg`
+- Runbook in `docs/runbook.md`
+- Working app screenshots through Application Gateway
+- Azure resource group screenshot
+- Fired alert screenshots
+- Dashboard or metrics screenshots
+- Demo script below
+- Final `terraform apply` output saved from a clean plan
+- Ansible rerun showing idempotent results
 
-## Getting Started
+## 3–5 Minute Demo Script
 
-1. **Clone the repository**
-2. **Set up environment variables**:
-   ```bash
-   cp environment.env.example environment.env
-   # Edit environment.env with your database credentials
-   ```
-3. **Start the backend**:
-   ```bash
-   cd backend
-   mvn spring-boot:run
-   ```
-4. **Start the frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-5. **Access the application**: http://localhost:5173
+1. Show the architecture diagram and explain the single public Application Gateway.
+2. Open the frontend through the Application Gateway public IP.
+3. Call `/api/ingredients` and `/api/health`.
+4. Place an order and show it can be read back.
+5. Show Azure SQL private endpoint and disabled public access.
+6. Show alert rules in Azure Monitor.
+7. Run one alert trigger script and show the alert firing.
+8. Show the GitHub Actions pipelines and SonarQube workflow.
 
-## API Endpoints
+## Operations
 
-- `GET /api/ingredients` - Get all ingredients
-- `GET /api/ingredients/{category}` - Get ingredients by category
-- `POST /api/cart/items` - Add item to cart
-- `GET /api/cart/{sessionId}` - Get cart items
-- `DELETE /api/cart/items/{itemId}` - Remove cart item
-- `POST /api/orders` - Create order
-- `GET /api/orders/{orderId}` - Get order details
-- `GET /api/orders/history` - Get order history
-
-## License
-
-This project is part of a capstone project for educational purposes.
+Runbook: [docs/runbook.md](/Users/duyguu16/Documents/conference/group1/project/docs/runbook.md)
